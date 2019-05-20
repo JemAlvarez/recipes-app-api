@@ -13,7 +13,6 @@ const recipeSchema = new mongoose.Schema({
     },
     image: {
         type: Buffer
-        // add default before save if not specified
     },
     owner: {
         type: mongoose.Schema.Types.ObjectId,

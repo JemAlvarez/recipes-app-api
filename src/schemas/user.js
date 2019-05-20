@@ -41,7 +41,9 @@ const userSchema = new mongoose.Schema({
     },
     profileImg: {
         type: Buffer
-        // add default before save if not specified
+    },
+    bannerImg: {
+        type: Buffer
     },
     tokens: {
         type: [{
