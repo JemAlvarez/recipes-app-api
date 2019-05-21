@@ -39,7 +39,23 @@ router.post('/recipes', auth, async (req, res) => {
     }
 })
 
-// ! CHANGE (NOT FINISHED)
+// ? GET
+
+// * Get recipe
+router.get('/recipes/:id', auth, async (req, res) => {
+    try {
+        const recipe = await Recipe.findOne({ _id: req.params.id, owner: req.user._id })
+
+        if (!recipe) {
+            return res.status(404).send()
+        }
+
+        res.send(recipe)
+    } catch (e) {
+        res.status(500).send()
+    }
+})
+
 // * Get recipe img
 router.get('/recipes/:id/img', async (req, res) => {
     try {
@@ -48,7 +64,49 @@ router.get('/recipes/:id/img', async (req, res) => {
         res.set('Content-Type', 'image/png')
         res.send(recipe.image)
     } catch (e) {
+        res.status(404).send()
+    }
+})
 
+// * Get recipes (all)
+// TODO: ?fav=true
+// TODO: ?limit=10&page=2
+// TODO: ?sortBy=createdAt_asc/desc
+router.get('/recipes', auth, async (req, res) => {
+    const match = {}
+    const sort = {}
+    const filter = { owner: req.user._id }
+
+    if (req.query.fav) {
+        match.fav = req.query.fav === 'true'
+        filter.fav = match.fav
+    }
+
+    if (req.query.sortBy) {
+        const parts = req.query.sortBy.split('_')
+        sort[parts[0]] = parts[1] === 'desc' ? -1 : 1
+    }
+
+    const recipesNum = await Recipe.countDocuments(filter, (err, count) => count)
+
+    try {
+        await req.user.populate({
+            path: 'recipes',
+            match,
+            options: {
+                limit: parseInt(req.query.limit),
+                skip: (parseInt(req.query.pageNum) - 1) * parseInt(req.query.limit),
+                sort
+            }
+        }).execPopulate()
+        res.send({
+            pages: Math.ceil(recipesNum / req.query.limit),
+            pageNum: parseInt(req.query.pageNum),
+            recipesNum,
+            recipes: req.user.recipes
+        })
+    } catch (e) {
+        res.status(500).send()
     }
 })
 
