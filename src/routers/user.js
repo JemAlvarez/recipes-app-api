@@ -125,5 +125,57 @@ router.get('/users/:id/bannerImg', async (req, res) => {
     }
 })
 
+// ? PATCH
+
+// * Update user
+router.patch('/users/me', auth, async (req, res) => {
+    const updates = Object.keys(req.body)
+    const allowedUpdates = ['username', 'email', 'password', 'bio']
+    const isValid = updates.every(update => allowedUpdates.includes(update))
+
+    if (!isValid) {
+        res.status(400).send({ error: 'Invalid updates.' })
+    }
+
+    try {
+        const user = req.user
+
+        updates.forEach(update => user[update] = req.body[update])
+        await user.save()
+
+        res.send(user)
+    } catch (e) {
+        res.status(400).send(e)
+    }
+})
+
+// ? DELETE
+
+// * Delete user 
+router.delete('/users/me', auth, async (req, res) => {
+    try {
+        await req.user.remove()
+        res.send(req.user)
+    } catch (e) {
+
+    }
+})
+
+// * Delete user avatar
+router.delete('/users/me/profileImg', auth, async (req, res) => {
+    const profBuffer = await sharp(path.join(__dirname, '../imgs/user-placeholder.png')).resize({ height: 250 }).png().toBuffer()
+    req.user.profileImg = profBuffer
+    await req.user.save()
+    res.send()
+})
+
+// * Delete user banner
+router.delete('/users/me/bannerImg', auth, async (req, res) => {
+    const bannerBuffer = await sharp(path.join(__dirname, '../imgs/banner-placeholder.jpeg')).resize({ height: 250 }).png().toBuffer()
+    req.user.bannerImg = bannerBuffer
+    await req.user.save()
+    res.send()
+})
+
 
 module.exports = router

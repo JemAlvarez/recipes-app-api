@@ -39,6 +39,20 @@ router.post('/recipes', auth, async (req, res) => {
     }
 })
 
+// * upload recipe image
+router.post('/recipes/:id/img', auth, upload.single('recipeImg'), async (req, res) => {
+    const buffer = await sharp(req.file.buffer).resize({ height: 250 }).png().toBuffer()
+    const recipe = await Recipe.findOne({ _id: req.params.id, owner: req.user._id })
+    if (!recipe) {
+        return res.status(404).send()
+    }
+    recipe.image = buffer
+    await recipe.save()
+    res.send()
+}, (e, req, res, next) => {
+    res.status(400).send({ error: e.message })
+})
+
 // ? GET
 
 // * Get recipe
@@ -105,6 +119,75 @@ router.get('/recipes', auth, async (req, res) => {
             recipesNum,
             recipes: req.user.recipes
         })
+    } catch (e) {
+        res.status(500).send()
+    }
+})
+
+// ? PATCH
+
+// * Update recipe
+router.patch('/recipes/:id', auth, async (req, res) => {
+    const updates = Object.keys(req.body)
+    const allowedUpdates = ['title', 'desc', 'fav', 'steps', 'ingredients', 'rating', 'diff']
+    const isValid = updates.every(update => allowedUpdates.includes(update))
+
+    if (!isValid) {
+        res.status(400).send({ error: 'Invalid updates.' })
+    }
+
+    try {
+        const recipe = await Recipe.findOne({ _id: req.params.id, owner: req.user._id })
+
+        if (!recipe) {
+            res.status(404).send()
+        }
+
+        updates.forEach(update => recipe[update] = req.body[update])
+        await recipe.save()
+
+        res.send(recipe)
+    } catch (e) {
+        res.status(400).send(e)
+    }
+})
+
+// ? DELETE 
+
+// * Delete recipe img
+router.delete('/recipes/:id/img', auth, async (req, res) => {
+    const buffer = await sharp(path.join(__dirname, '../imgs/food-placeholder.png')).resize({ height: 250 }).png().toBuffer()
+    const recipe = await Recipe.findOne({ _id: req.params.id, owner: req.user._id })
+    if (!recipe) {
+        return res.status(404).send()
+    }
+    recipe.image = buffer
+    await recipe.save()
+    res.send()
+})
+
+// * Delete recipes (all)
+router.delete('/recipes/deleteAll', auth, async (req, res) => {
+    try {
+        await Recipe.deleteMany({}, e => {
+            if (e) return res.send(e)
+        })
+        res.send()
+    } catch (e) {
+        res.status(500).send()
+    }
+})
+
+// * Delete recipe 
+router.delete('/recipes/:id', auth, async (req, res) => {
+    try {
+        const recipe = await Recipe.findOneAndDelete({ _id: req.params.id, owner: req.user._id })
+
+        if (!recipe) {
+            return res.status(404).send()
+        }
+
+        res.send(recipe)
     } catch (e) {
         res.status(500).send()
     }
