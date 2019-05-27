@@ -5,3 +5,4 @@ mongoose.connect(process.env.MONGODB_URL, {
     useCreateIndex: true,
     useFindAndModify: false
 })
+    .catch(err => console.log(err))
